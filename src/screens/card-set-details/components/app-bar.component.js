@@ -1,42 +1,33 @@
 import * as React from 'react';
-import { Appbar } from 'react-native-paper';
-import { StyleSheet, TextInput, View, Text } from 'react-native';
-import { Icon } from 'react-native-elements'
+import { StyleSheet, View, Animated } from 'react-native';
+import { Icon } from 'react-native-elements';
+import { TouchableOpacity } from 'react-native';
 
-const AppbarComponent = ({ navigateToCardScreen }) => {
-
-  const [text, onChangeText] = React.useState();
+const AppbarComponent = ({ onBackPress }) => {
+  const iconScaleAnim = React.useRef(new Animated.Value(1)).current;
 
   return (
-    <Appbar.Header
-      style={styles.appBar}
-      statusBarHeight={5}
-    >
+    <View style={styles.appBar}>
       <View style={styles.container}>
-        <View style={styles.arrowLeftContainer}>
-          <Icon
-            name='arrow-back-outline'
-            type='ionicon'
-            onPress={navigateToCardScreen}
-          />
-        </View>
-        <View style={styles.searchWrapper}>
-          <Text style={styles.searchIcon}>
+        <Animated.View style={[styles.backButtonContainer, { transform: [{ scale: iconScaleAnim }] }]}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={onBackPress}
+            activeOpacity={0.7}
+          >
             <Icon
-              name='search'
+              name='arrow-back'
               type='material'
-              size={20}
+              color="#F59E0B"
             />
-          </Text>
-          <TextInput
-            style={styles.inputField}
-            onChangeText={onChangeText}
-            placeholder="Search..."
-            value={text}
-          />
-        </View>
+          </TouchableOpacity>
+        </Animated.View>
+
       </View>
-    </Appbar.Header>
+
+      {/* Subtle Separator */}
+      <View style={styles.separator} />
+    </View>
   )
 }
 
@@ -44,33 +35,23 @@ export default AppbarComponent
 
 const styles = StyleSheet.create({
   appBar: {
-    backgroundColor: "white",
-    elevation: 0,
-    shadowOpacity: 0,
-    borderBottomWidth: 0,
+    padding: 8,
   },
   container: {
-    flex: 1,
-    flexDirection: "row",
-    paddingLeft: 20,
-    paddingRight: 20
-  },
-  arrowLeftContainer: {
-    flex: 1
-  },
-  searchWrapper: {
-    flex: 7,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "whitesmoke",
-    borderRadius: 10,
-    paddingLeft: 20,
-    paddingRight: 20
+    paddingHorizontal: 20,
   },
-  searchIcon: {
-    flex: 1
+  backButtonContainer: {
+    zIndex: 1,
   },
-  inputField: {
-    flex: 9,
-  }
+  backButton: {
+    padding: 8,
+    borderRadius: 12,
+  },
+  separator: {
+    height: 1,
+    marginTop: 12,
+    marginHorizontal: 20,
+  },
 });
