@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 4,
+    marginBottom: 12,
   },
   featureIcon: {
     fontSize: 24,

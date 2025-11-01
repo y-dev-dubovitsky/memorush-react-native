@@ -228,6 +228,7 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     backgroundColor: '#FF7B42',
+    width: 150,
     borderRadius: 16,
     paddingVertical: 16,
     shadowColor: '#FF7B42',
