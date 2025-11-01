@@ -17,7 +17,7 @@ const RegistrationScreen = (props) => {
 
   useEffect(() => {
     if (status === "register") {
-      props.navigation.navigate("SignInScreen");
+      props.navigation.navigate("OfflineSignInScreen");
     }
   }, [status])
 
@@ -96,7 +96,7 @@ const RegistrationScreen = (props) => {
               <ButtonComponent
                 style={styles.button}
                 name="Go back"
-                onClickHandler={() => props.navigation.navigate("SignInScreen")}
+                onClickHandler={() => props.navigation.navigate("OfflineSignInScreen")}
               >
               </ButtonComponent>
             </View>

@@ -14,6 +14,7 @@ import LearnCardSetScreen from '../screens/learn-card-set/learn-card-set.screen'
 import RegistrationScreen from '../screens/registration/registration.screen';
 import InfoScreen from '../screens/info/info.screen';
 import SignInScreen from '../screens/sign-in/sign-in.screen';
+import OfflineSignInScreen from '../screens/offline-sign-in/offline-sign-in.screen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -22,8 +23,8 @@ const MainStackNavigator = () => (
   <ImgBackgroundComponent>
     <NavigationContainer>
       <PopupWrapperHOC>
-        <Stack.Navigator initialRouteName="SignInScreen" screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="SignInScreen" component={SignInScreen} />
+        <Stack.Navigator initialRouteName="OfflineSignInScreen" screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="OfflineSignInScreen" component={OfflineSignInScreen} />
           <Stack.Screen name="RegistrationScreen" component={RegistrationScreen} />
           <Stack.Screen name="CardSetEditScreen" component={CardSetEditScreen} />
           {/* //! Inner navigation below*/}
