@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   button: {
-    height: 35,
+    height: 50,
     marginBottom: 10
   },
   text: {

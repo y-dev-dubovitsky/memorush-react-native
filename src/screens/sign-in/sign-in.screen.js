@@ -1,132 +1,132 @@
-import React, { useEffect, useState } from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from 'react';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch, useSelector } from "react-redux";
-import { authSelector, login } from "../../redux/features/auth/auth-slice";
-import ButtonComponent from "../../common/components/button/button.component";
-import TextInputComponent from "./atomic-components/text-input.component";
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  authSelector,
+  login,
+  guestLogin,
+} from '../../redux/features/auth/auth-slice';
+import ButtonComponent from '../../common/components/button/button.component';
+import TextInputComponent from './atomic-components/text-input.component';
 
 const IMAGE_PATH = "./images/adaptive-icon.png";
 
-const SignInScreen = (props) => {
-
+const SignInScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const [formData, setFormData] = useState();
-  const { authEntity, error, status } = useSelector(authSelector);
+  const [formData, setFormData] = useState({ username: '', password: '' });
+  const { status } = useSelector(authSelector);
 
   useEffect(() => {
-    if (status === "login") {
-      props.navigation.navigate("MainTabNavigation");
+    if (status === 'login') {
+      navigation.navigate('MainTabNavigation');
     }
-  }, [status])
+  }, [status, navigation]);
 
   const formInputHandler = ({ name, value }) => {
-    setFormData({
-      ...formData,
-      [name]: value
-    })
-  }
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   const onLoginFormHandler = () => {
     dispatch(login(formData));
-  }
+  };
+
+  const onGuestFormHandler = () => {
+    dispatch(guestLogin());
+  };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        {/* Логотип */}
         <View style={styles.logoContainer}>
-          <Image
-            style={styles.tinyLogo}
-            source={require(IMAGE_PATH)}
+          <Image source={require(IMAGE_PATH)} style={styles.logo} />
+        </View>
+
+        {/* Форма входа */}
+        <View style={styles.formContainer}>
+          <Text style={styles.label}>Username</Text>
+          <TextInputComponent
+            placeholder="Username"
+            name="username"
+            value={formData.username}
+            formInputHandler={formInputHandler}
+          />
+
+          <Text style={styles.label}>Password</Text>
+          <TextInputComponent
+            placeholder="Password"
+            name="password"
+            value={formData.password}
+            formInputHandler={formInputHandler}
+            secureTextEntry
           />
         </View>
-        <View style={styles.scrollViewContainer}>
-          <ScrollView>
-            <View style={styles.inputTextContainer}>
-              <Text>Username</Text>
-              <TextInputComponent
-                placeholder="Username"
-                name="username"
-                formInputHandler={formInputHandler}
-              >
-              </TextInputComponent>
-              <Text>Password</Text>
-              <TextInputComponent
-                placeholder="Password"
-                name="password"
-                formInputHandler={formInputHandler}
-              >
-              </TextInputComponent>
-            </View>
-            <View style={styles.buttonsContainer}>
-              <ButtonComponent
-                style={[styles.button]}
-                name="Sign In"
-                onClickHandler={onLoginFormHandler}
-              >
-              </ButtonComponent>
-              <ButtonComponent
-                style={styles.button}
-                name="Registration"
-                onClickHandler={() => props.navigation.navigate("RegistrationScreen")}
-              >
-              </ButtonComponent>
-            </View>
-          </ScrollView>
+
+        {/* Кнопки */}
+        <View style={styles.buttonsContainer}>
+          <ButtonComponent
+            style={styles.button}
+            name="Sign In"
+            onClickHandler={onLoginFormHandler}
+          />
+          <ButtonComponent
+            style={styles.button}
+            name="Registration"
+            onClickHandler={() => navigation.navigate('RegistrationScreen')}
+          />
+          <ButtonComponent
+            style={[styles.button, styles.guestButton]}
+            name="Guest"
+            onClickHandler={onGuestFormHandler}
+          />
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    padding: "10%",
+    backgroundColor: '#ffffff',
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+    justifyContent: 'center',
   },
   logoContainer: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-    alignContent: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    marginBottom: 48,
   },
-  tinyLogo: {
-    width: "100%",
-    height: "100%",
+  logo: {
+    width: 100,
+    height: 100,
     resizeMode: 'contain',
   },
-  scrollViewContainer: {
-    flex: 1,
+  formContainer: {
+    marginBottom: 32,
   },
-  inputTextContainer: {
-    flex: 2,
-    flexDirection: "column",
-    justifyContent: "center",
-    justifyContent: 'space-around',
-    marginBottom: 5
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
   },
   buttonsContainer: {
-    flex: 2,
-    flexDirection: "column",
-    justifyContent: "flex-end",
-    justifyContent: 'space-around'
-  },
-  textContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-end",
+    // gap не поддерживается в RN 0.70 → используем marginBottom на кнопках
   },
   button: {
-    height: 35,
-    marginBottom: 10
+    height: 50,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12, // ← отступ между кнопками
   },
-  text: {
-    color: "white",
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10
-  }
+  guestButton: {
+    backgroundColor: '#C0C0C0', // silver
+  },
 });
 
 export default SignInScreen;
