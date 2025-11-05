@@ -1,12 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import fetchDataService from '../../../service/fetchDataService';
-import {
-  loadGuestCardSets,
-  saveGuestCardSets,
-} from '../../../utils/storage.utils';
 import { BASE_URL } from '../../const/url-endpoints.const';
-import { isGuestSelector } from '../auth/auth-slice';
-import { useSelector } from 'react-redux';
+import cardSetsDB from '../../../utils/sqliteDatabase';
 
 // -------------------------------------- AsyncThunk --------------------------------------
 
@@ -15,13 +10,19 @@ export const getAllCardSets = createAsyncThunk(
   async (arg, { getState }) => {
     const state = getState();
     const token = state.auth.authEntity.token;
-    const isGuest = useSelector(isGuestSelector);
+    const isGuest = state.auth.authEntity.isGuest;
+
+    console.log("=== GET ALL CARD SETS ===");
+    console.log("isGuest:", isGuest);
 
     if (isGuest) {
-      const guestCardSets = await loadGuestCardSets();
+      // Используем SQLite вместо AsyncStorage
+      const guestCardSets = await cardSetsDB.getAllCardSets();
+      console.log("✅ Guest card sets loaded from SQLite:", guestCardSets.length);
       return guestCardSets;
     }
 
+    // Режим пользователя - API вызов
     const payload = {
       method: 'GET',
       url: `${BASE_URL}/api/v1/card-set/all`,
@@ -38,26 +39,33 @@ export const getAllCardSets = createAsyncThunk(
 
 export const createNewCardSet = createAsyncThunk(
   'card/create',
-  async (arg, { getState }) => {
+  async (cardSetEntity, { getState }) => {
     const state = getState();
     const token = state.auth.authEntity.token;
-    const isGuest = isGuestSelector(state);
+    const isGuest = state.auth.authEntity.isGuest;
+
+    console.log("=== CREATE CARD SET ===");
+    console.log("isGuest:", isGuest);
+    console.log("CardSet data:", cardSetEntity);
 
     const newCardSet = {
-      ...arg,
-      tags: arg.tags.split(','),
-      flashCardArray: Object.values(arg.flashCardArray),
-      id: Date.now().toString(), // Генерируем ID для гостевого режима
+      ...cardSetEntity,
+      tags: Array.isArray(cardSetEntity.tags) 
+        ? cardSetEntity.tags 
+        : (cardSetEntity.tags?.split(',') || []),
+      flashCardArray: cardSetEntity.flashCardArray || {},
+      id: Date.now().toString(),
       isFavorite: false,
     };
 
     if (isGuest) {
-      const currentCardSets = await loadGuestCardSets();
-      const updatedCardSets = [...currentCardSets, newCardSet];
-      await saveGuestCardSets(updatedCardSets);
-      return newCardSet;
+      // Сохраняем в SQLite
+      const createdSet = await cardSetsDB.createCardSet(newCardSet);
+      console.log("✅ Guest card set created in SQLite:", createdSet.id);
+      return createdSet;
     }
 
+    // Режим пользователя - API вызов
     const payload = {
       method: 'POST',
       url: `${BASE_URL}/api/v1/card-set/add`,
@@ -77,64 +85,40 @@ export const updateCardSet = createAsyncThunk(
   'card/update',
   async (arg, { getState, rejectWithValue }) => {
     try {
-      console.log("=== UPDATE CARD SET THUNK STARTED ===");
+      console.log("=== UPDATE CARD SET ===");
       
       const state = getState();
       const token = state.auth.authEntity.token;
       const isGuest = state.auth.authEntity.isGuest;
       const { cardSetId, cardSetEntity } = arg;
 
-      console.log("Updating card set, isGuest:", isGuest);
+      console.log("isGuest:", isGuest);
       console.log("CardSetId:", cardSetId);
-      console.log("CardSetEntity:", cardSetEntity);
-      console.log("Tags type:", typeof cardSetEntity.tags, "Value:", cardSetEntity.tags);
 
-      // Исправляем обработку tags
+      // Обрабатываем tags
       let processedTags = cardSetEntity.tags;
-      
-      // Если tags - строка, разбиваем по запятым
       if (typeof cardSetEntity.tags === 'string') {
         processedTags = cardSetEntity.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-      }
-      // Если tags уже массив, оставляем как есть
-      else if (Array.isArray(cardSetEntity.tags)) {
+      } else if (Array.isArray(cardSetEntity.tags)) {
         processedTags = cardSetEntity.tags.filter(tag => tag.length > 0);
-      }
-      // Если tags undefined или null, создаем пустой массив
-      else {
+      } else {
         processedTags = [];
       }
 
-      console.log("Processed tags:", processedTags);
-
       const updatedCardSet = {
         ...cardSetEntity,
-        tags: processedTags, // Используем обработанные tags
-        flashCardArray: Object.values(cardSetEntity.flashCardArray || {}),
+        tags: processedTags,
+        flashCardArray: cardSetEntity.flashCardArray || {},
       };
 
-      console.log("Updated card set prepared:", updatedCardSet);
-
       if (isGuest) {
-        console.log("🎯 Guest mode - saving locally");
-        const currentCardSets = await loadGuestCardSets();
-        console.log("Current guest card sets:", currentCardSets);
-        
-        const updatedCardSets = currentCardSets.map(cardSet =>
-          cardSet.id === cardSetId
-            ? { ...updatedCardSet, id: cardSetId }
-            : cardSet
-        );
-        
-        console.log("Updated guest card sets:", updatedCardSets);
-        await saveGuestCardSets(updatedCardSets);
-        console.log("✅ Guest data saved successfully");
-        
-        return { ...updatedCardSet, id: cardSetId };
+        // Обновляем в SQLite
+        const result = await cardSetsDB.updateCardSet(cardSetId, updatedCardSet);
+        console.log("✅ Guest card set updated in SQLite");
+        return result;
       }
 
-      console.log("👤 User mode - making API call");
-      
+      // Режим пользователя - API вызов
       if (!token) {
         throw new Error('No authentication token');
       }
@@ -150,14 +134,10 @@ export const updateCardSet = createAsyncThunk(
         },
       };
       
-      console.log("API payload:", payload);
       const response = await fetchDataService(payload);
-      console.log("✅ API response:", response);
-      
       return response.data;
     } catch (error) {
-      console.log("❌ ERROR in updateCardSet thunk:", error);
-      console.log("Error message:", error.message);
+      console.log("❌ ERROR in updateCardSet:", error);
       return rejectWithValue(error.message);
     }
   }
@@ -168,17 +148,19 @@ export const deleteCardSet = createAsyncThunk(
   async ({ cardSetId }, { getState }) => {
     const state = getState();
     const token = state.auth.authEntity.token;
-    const isGuest = isGuestSelector(state);
+    const isGuest = state.auth.authEntity.isGuest;
+
+    console.log("=== DELETE CARD SET ===");
+    console.log("isGuest:", isGuest);
 
     if (isGuest) {
-      const currentCardSets = await loadGuestCardSets();
-      const updatedCardSets = currentCardSets.filter(
-        cardSet => cardSet.id !== cardSetId
-      );
-      await saveGuestCardSets(updatedCardSets);
+      // Удаляем из SQLite
+      await cardSetsDB.deleteCardSet(cardSetId);
+      console.log("✅ Guest card set deleted from SQLite");
       return { id: cardSetId };
     }
 
+    // Режим пользователя - API вызов
     const payload = {
       method: 'DELETE',
       url: `${BASE_URL}/api/v1/card-set/delete/${cardSetId}`,
@@ -195,28 +177,26 @@ export const deleteCardSet = createAsyncThunk(
 
 export const setFavoriteCardSet = createAsyncThunk(
   'card/setFavorite',
-  async (id, { getState }) => {
+  async (cardSetId, { getState }) => {
     const state = getState();
     const token = state.auth.authEntity.token;
-    const isGuest = isGuestSelector(state);
+    const isGuest = state.auth.authEntity.isGuest;
+
+    console.log("=== TOGGLE FAVORITE ===");
+    console.log("isGuest:", isGuest);
 
     if (isGuest) {
-      const currentCardSets = await loadGuestCardSets();
-      const card = currentCardSets.find(card => card.id === id);
-      if (!card) throw new Error('Card set not found');
-
-      const updatedCard = { ...card, isFavorite: !card.isFavorite };
-      const updatedCardSets = currentCardSets.map(cardSet =>
-        cardSet.id === id ? updatedCard : cardSet
-      );
-      await saveGuestCardSets(updatedCardSets);
+      // Обновляем в SQLite
+      const updatedCard = await cardSetsDB.toggleFavorite(cardSetId);
+      console.log("✅ Guest favorite toggled in SQLite");
       return updatedCard;
     }
 
-    const card = state.cardSet.cardEntity.find(card => card.id === id);
+    // Режим пользователя - API вызов
+    const card = state.cardSet.cardEntity.find(card => card.id === cardSetId);
     const payload = {
       method: 'PUT',
-      url: `${BASE_URL}/api/v1/card-set/update/${id}`,
+      url: `${BASE_URL}/api/v1/card-set/update/${cardSetId}`,
       data: {
         ...card,
         isFavorite: !card.isFavorite,
@@ -263,7 +243,6 @@ const cardSetSlice = createSlice({
         state.status = 'failed';
         state.error = action.error.message;
       })
-      // Add new card set
       .addCase(createNewCardSet.pending, state => {
         state.status = 'loading';
       })
@@ -275,7 +254,6 @@ const cardSetSlice = createSlice({
         state.status = 'failed';
         state.error = action.error.message;
       })
-      // Update card set
       .addCase(updateCardSet.pending, state => {
         state.status = 'loading';
       })
@@ -292,15 +270,10 @@ const cardSetSlice = createSlice({
         state.status = 'failed';
         state.error = action.error.message;
       })
-      // Delete card set
       .addCase(deleteCardSet.fulfilled, (state, action) => {
         state.cardEntity = state.cardEntity.filter(
           card => card.id !== action.payload.id
         );
-      })
-      // Set favorite card set
-      .addCase(setFavoriteCardSet.pending, state => {
-        state.status = 'loading';
       })
       .addCase(setFavoriteCardSet.fulfilled, (state, action) => {
         state.status = 'succeeded';
@@ -321,46 +294,11 @@ const cardSetSlice = createSlice({
 export const { clearGuestData } = cardSetSlice.actions;
 export default cardSetSlice.reducer;
 
-// -------------------------------------- Selectors --------------------------------------
-
 export const cardEntitySelector = state => state.cardSet.cardEntity;
 export const cardByIdSelector = (state, id) =>
   state.cardSet.cardEntity.find(card => id === card.id);
-
-export const cardEntityByFavoriteAndLearnedSelector = (
-  state,
-  favorite,
-  learned
-) => {
-  const favoriteCards = state.cardSet.cardEntity.filter(card => {
-    return card.favorite === favorite;
-  });
-  const learnedCards = state.cardSet.cardEntity.filter(card => {
-    return card.learned === learned;
-  });
-  if (favorite === true && learned === false) return favoriteCards;
-  if (favorite === false && learned === true) return learnedCards;
-  return state.cardSet.cardEntity;
-};
-
-export const cardSetByIdSelector = (state, id) =>
-  state.cardSet.cardEntity.find(cardSet => id === cardSet.id);
-
-export const getSortedCardByCardSetSelector = state => {
-  const sorted = state.cardSet.cardEntity.reduce((result, card) => {
-    result[card.cardSet.id] = {
-      ...result[card.cardSet.id],
-      [card.id]: card,
-    };
-    return result;
-  }, {});
-
-  return sorted;
-};
-
 export const cardSetFavoriteSelector = state =>
   state.cardSet.cardEntity.filter(card => card.isFavorite === true);
-
 export const filterCardSetByNameSelector = (state, name) => {
   if (name.length > 0) {
     return state.cardSet.cardEntity.filter(entity =>
