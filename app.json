@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "memorush-react-native",
-    "slug": "memorush-react-native",
+    "name": "derzhi-slovo",
+    "slug": "derzhi-slovo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -18,14 +18,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ydubovitsky.memorushreactnative"
+      "bundleIdentifier": "com.ydubovitsky.derzhislovo"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
-      "package": "com.ydubovitsky.memorushreactnative"
+      "package": "com.ydubovitsky.derzhislovo"
     },
     "web": {
       "favicon": "./assets/favicon.png"
